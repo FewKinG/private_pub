@@ -29,6 +29,17 @@ module PrivatePub
       publish_message(message(channel, data))
     end
 
+		def unsubscribe(client_id, channel)
+			publish_message(message(
+				"/meta/unsubscribe", 
+				{
+					:client_id => client_id,
+					:channel => channel,
+					:token => PrivatePub.config[:secret_token]
+				}
+			))
+		end
+
     # Sends the given message hash to the Faye server using Net::HTTP.
     def publish_message(message)
       raise Error, "No server specified, ensure private_pub.yml was loaded properly." unless config[:server]
@@ -69,8 +80,16 @@ module PrivatePub
     # Returns the Faye Rack application.
     # Any options given are passed to the Faye::RackAdapter.
     def faye_app(options = {})
-      options = {:mount => "/faye", :timeout => 45, :extensions => [FayeExtension.new]}.merge(options)
-      Faye::RackAdapter.new(options)
+			opts = {}
+      options = {
+				:mount => "/faye", 
+				:timeout => 45, 
+				:extensions => [FayeExtension.new(opts)],
+				:engine => {
+					:type => PrivatePub::MemoryEngine
+				}
+			}.merge(options)
+      opts[:adapter] = Faye::RackAdapter.new(options)
     end
   end
 

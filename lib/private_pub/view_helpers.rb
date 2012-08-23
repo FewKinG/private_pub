@@ -1,3 +1,5 @@
+require "digest/sha1"
+
 module PrivatePub
   module ViewHelpers
     # Publish the given data or block to the client by sending
@@ -12,8 +14,10 @@ module PrivatePub
     # Subscribe the client to the given channel. This generates
     # some JavaScript calling PrivatePub.sign with the subscription
     # options.
-    def subscribe_to(channel)
-      subscription = PrivatePub.subscription(:channel => channel)
+    def subscribe_to(channel, client_id = nil, &block)
+			client_id ||= ApplicationController.private_pub_client_id
+      subscription = PrivatePub.subscription(:channel => channel, :client_id => client_id)
+			block.call(subscription) if block_given?
       content_tag "script", :type => "text/javascript" do
         raw("PrivatePub.sign(#{subscription.to_json});")
       end
