@@ -1,7 +1,8 @@
-require "digest/sha1"
 require "net/http"
 require "net/https"
 require 'uri'
+
+require "openssl"
 
 require "private_pub/faye_extension"
 require "private_pub/engine" if defined? Rails
@@ -30,6 +31,16 @@ module PrivatePub
       publish_message(message(channel, data))
     end
 
+		def unsubscribe_from(channel, client_name)
+			publish_message(message(
+				"/meta/unsubscribe", 
+				{
+					:channel => channel,
+					:client_name => client_name
+				}
+			))
+		end
+
     # Sends the given message hash to the Faye server using Net::HTTP.
     def publish_message(message)
       raise Error, "No server specified, ensure private_pub.yml was loaded properly." unless config[:server]
@@ -49,7 +60,13 @@ module PrivatePub
       if data.kind_of? String
         message[:data][:eval] = data
       else
-        message[:data][:data] = data
+				if channel == "/meta/unsubscribe"
+					message[:ext][:clientName] = data[:client_name]
+					message[:data] = nil
+					message[:subscription] = data[:channel]
+				else
+					message[:data][:data] = data
+				end
       end
       message
     end
@@ -57,8 +74,9 @@ module PrivatePub
     # Returns a subscription hash to pass to the PrivatePub.sign call in JavaScript.
     # Any options passed are merged to the hash.
     def subscription(options = {})
-      sub = {:server => config[:server], :timestamp => (Time.now.to_f * 1000).round}.merge(options)
-      sub[:signature] = Digest::SHA1.hexdigest([config[:secret_token], sub[:channel], sub[:timestamp]].join)
+      sub = {:server => config[:server], :timestamp => (Time.now.to_f * 1000).round, :client_name => ""}.merge(options)
+			digester = OpenSSL::Digest::Digest.new('sha1')
+      sub[:signature] = OpenSSL::HMAC.hexdigest(digester, config[:secret_token], [sub[:channel], sub[:timestamp], sub[:client_name]].join)
       sub
     end
 
@@ -70,8 +88,13 @@ module PrivatePub
     # Returns the Faye Rack application.
     # Any options given are passed to the Faye::RackAdapter.
     def faye_app(options = {})
-      options = {:mount => "/faye", :timeout => 45, :extensions => [FayeExtension.new]}.merge(options)
-      Faye::RackAdapter.new(options)
+			opts = {}
+      options = {
+				:mount => "/faye", 
+				:timeout => 45, 
+				:extensions => [FayeExtension.new(opts)]
+			}.merge(options)
+      opts[:adapter] = Faye::RackAdapter.new(options)
     end
   end
 

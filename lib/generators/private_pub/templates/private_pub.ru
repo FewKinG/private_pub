@@ -3,6 +3,7 @@ require "bundler/setup"
 require "yaml"
 require "faye"
 require "private_pub"
+require "private_pub/memory_engine"
 
 Faye::WebSocket.load_adapter('thin')
 
