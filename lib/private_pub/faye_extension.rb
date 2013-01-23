@@ -46,8 +46,6 @@ module PrivatePub
 				end
 			elsif message["channel"] == "/meta/unsubscribe"
 				if message["ext"]["private_pub_token"]
-					puts "Unsubscribe!"
-					puts message.inspect	
 					# Message is from server
 					if authenticate_publish(message)
 						message["error"] = "Incorrect token."
@@ -56,8 +54,6 @@ module PrivatePub
 						client_map_get(name).each do |id|
 							m = Faye.copy_object(message)
 							m["clientId"] = id
-							puts "Sending"
-							puts m.inspect
 							callback.call(m)
 						end
 						return
