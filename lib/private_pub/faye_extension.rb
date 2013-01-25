@@ -19,7 +19,7 @@ module PrivatePub
 		def client_map_clean(name)
 			if map = self.client_name_map[name]
 				map.keys.each do |k|
-					if map[k] < Time.now - PrivatePub.config[:signature_expiration]
+					if map[k] and map[k] < Time.now - PrivatePub.config[:signature_expiration]
 						map[k] = nil
 					end
 				end
