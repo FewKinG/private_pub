@@ -65,8 +65,17 @@ function buildPrivatePub(doc) {
     },
 
     subscribe: function(channel, callback) {
-      self.subscriptionCallbacks[channel] = callback;
-    }
+			self.subscriptionCallbacks[channel] = callback;
+			return {
+				unsubscribe: function() {
+					self.unsubscribe(channel);	
+				}
+			};
+    },
+
+		unsubscribe: function(channel) {
+			delete self.subscriptionCallbacks[channel];
+		}
   };
   return self;
 }
